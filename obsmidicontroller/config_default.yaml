@@ -1,0 +1,16 @@
+version: 1
+obsserver:
+    host: "localhost"
+    port: 4444
+    password: "password"
+controller:
+  channel:
+    id: 10
+  notes:
+    scenes: [8,9,10,11,12,13,14]
+    transitions: [16,17,18,19,20,21,22,23]
+    recording: [15]
+    streaming: [23]
+  audio:
+    mute: [0,1,2,3,4,5,6,7]
+    vol: [1,2,3,4,5,6,7,8]
