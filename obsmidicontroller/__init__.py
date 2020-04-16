@@ -8,6 +8,7 @@ import mido
 import obswebsocket
 import obswebsocket.requests
 import yaml
+import pygame.mixer as mixer
 
 
 class OBSMidi:
@@ -17,14 +18,16 @@ class OBSMidi:
     sceneBegin = 8
     config = None
     audiosources = None
-
+ 
     def __init__(self, config):
         self.config = config
         self.controllers = mido.get_input_names()
         print(self.controllers)
+        mixer.init()
         self.initUI()
         self.port = mido.open_input(callback=self.print_message)
         self.window.mainloop()
+
 
     def initializeAudiosources(self):
         scenes = self.client.call(obswebsocket.requests.GetSceneList())
@@ -148,6 +151,13 @@ class OBSMidi:
                         name = audiosources[mutedefs.index(message.note)]
                         self.client.call(
                             obswebsocket.requests.ToggleMute(name))
+                soundboard = self.config['controller']['soundboard'].get()
+                print(soundboard)
+                for i in soundboard:
+                    if message.note==i['id']:
+                        print(i['file'])
+                        mixer.music.load(i['file'])
+                        mixer.music.play()
         elif message.type == "control_change":
             if int(message.channel) == self.config['controller']['channel']['id'].get():
                 voldefs = self.config['controller']['audio']['vol'].get()

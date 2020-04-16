@@ -14,3 +14,53 @@ controller:
   audio:
     mute: [0,1,2,3,4,5,6,7]
     vol: [1,2,3,4,5,6,7,8]
+  soundboard:
+    -
+      id: 32
+      file: "D:\\Share\\OBS\\Sounds\\ba-dum-tss_2.mp3"
+    -
+      id: 33
+      file: "D:\\Share\\OBS\\Sounds\\cheerslove_1.mp3"
+    -
+      id: 34
+      file: "D:\\Share\\OBS\\Sounds\\dun-dun.mp3"
+    -
+      id: 35
+      file: "D:\\Share\\OBS\\Sounds\\excellent.mp3"
+    -
+      id: 36
+      file: "D:\\Share\\OBS\\Sounds\\homer-simpson-nerd.mp3"
+    -
+      id: 37
+      file: "D:\\Share\\OBS\\Sounds\\wilhelmscream.mp3"
+    -
+      id: 38
+      file: "D:\\Share\\OBS\\Sounds\\im-batman_1.mp3"
+    -
+      id: 39
+      file: "D:\\Share\\OBS\\Sounds\\inicio-windows.mp3"
+    -
+      id: 40
+      file: "D:\\Share\\OBS\\Sounds\\khaaan.swf.mp3"
+    -
+      id: 41
+      file: "D:\\Share\\OBS\\Sounds\\pacman-die.mp3"
+    -
+      id: 42
+      file: "D:\\Share\\OBS\\Sounds\\roger.mp3"
+    -
+      id: 43
+      file: "D:\\Share\\OBS\\Sounds\\139-item-catch.mp3"
+    -
+      id: 44
+      file: "D:\\Share\\OBS\\Sounds\\jeopardy.mp3"
+    -
+      id: 45
+      file: "D:\\Share\\OBS\\Sounds\\stop_1.mp3"
+    -
+      id: 46
+      file: "D:\\Share\\OBS\\Sounds\\warcraft-ii-sound-effects-orc-peon-grunt_-_work-complete.mp3"
+    -
+      id: 47
+      file: "D:\\Share\\OBS\\Sounds\\europe-the-final-countdownwith-lyrics-mp3cut.mp3"
+    
