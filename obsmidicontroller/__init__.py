@@ -9,6 +9,7 @@ import obswebsocket
 import obswebsocket.requests
 import yaml
 import pygame.mixer as mixer
+import math
 
 class OBSMidi:
     client = None
@@ -18,6 +19,7 @@ class OBSMidi:
     audiosources = None
     port=None
     outport=None
+    page=0
  
     def __init__(self, config):
         self.config = config
@@ -72,10 +74,23 @@ class OBSMidi:
         self.client = obswebsocket.obsws(host, port, password)
         self.client.connect()
         self.client.register(self.obsevent,obswebsocket.events.SwitchScenes)
+        self.client.register(self.newtreeobsevent,obswebsocket.events.ScenesChanged)
+        self.client.register(self.newtreeobsevent,obswebsocket.events.SceneCollectionChanged)
+        self.client.register(self.newtreeobsevent,obswebsocket.events.SceneCollectionListChanged)
+        self.client.register(self.newtreeobsevent,obswebsocket.events.ProfileChanged)
+        self.client.register(self.newtreeobsevent,obswebsocket.events.ProfileListChanged)
+        self.client.register(self.newtreeobsevent,obswebsocket.events.TransitionListChanged)
+        
+
         self.initializeAudiosources()
 
+    def newtreeobsevent(self,event):
+        print("^%$^%$^%$^ tree updating *(*(&^*&^*&^")
+        self.window.after(1,self.updateObsTree)
+    
     def obsevent(self, event):
         print(event)
+        self.audiosources=None
 
     def getAudioSourcesScene(self):
         if not self.audiosources:
@@ -124,6 +139,7 @@ class OBSMidi:
             obswebsocket.requests.GetStudioModeStatus())
         scenes = self.client.call(
             obswebsocket.requests.GetSceneList()).getScenes()
+        
         if scenedefs.index(message.note) < len(scenes):
             name = scenes[scenedefs.index(message.note)]['name']
             print(u"Switching to {}".format(name))
