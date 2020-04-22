@@ -10,79 +10,112 @@ controllers:
     -
       channel: 10
       name: "X-TOUCH MINI 0"
-      notes:
-        scenes: [8,9,10,11,12,13,14]
-        transitions: [16,17,18,19,20,21,22,23]
-        recording: [15]
-        streaming: [23]
-      audio:
-        #mute: [0,1,2,3,4,5,6,7]
-        mute: []
-        #vol: [1,2,3,4,5,6,7,8]
-        vol: []
-      soundboard:
-        -
-          name: "Ba Dum Tss"
-          id: 32
-          file: "D:\\Share\\OBS\\Sounds\\ba-dum-tss_2.mp3"
-        -
-          name: "Cheers Love"
-          id: 33
-          file: "D:\\Share\\OBS\\Sounds\\cheerslove_1.mp3"
-        -
-          name: "Dun Dun"
-          id: 34
-          file: "D:\\Share\\OBS\\Sounds\\dun-dun.mp3"
-        -
-          name: "Excellent"
-          id: 35
-          file: "D:\\Share\\OBS\\Sounds\\excellent.mp3"
-        -
-          name: "Homer: Nerd!"
-          id: 36
-          file: "D:\\Share\\OBS\\Sounds\\homer-simpson-nerd.mp3"
-        -
-          name: "Wilhem Scream"
-          id: 37
-          file: "D:\\Share\\OBS\\Sounds\\wilhelmscream.mp3"
-        -
-          name: "I'm Batman!"
-          id: 38
-          file: "D:\\Share\\OBS\\Sounds\\im-batman_1.mp3"
-        -
-          name: "Windows Startup"
-          id: 39
-          file: "D:\\Share\\OBS\\Sounds\\inicio-windows.mp3"
-        -
-          name: "Krik: Khaaan"
-          id: 40
-          file: "D:\\Share\\OBS\\Sounds\\khaaan.swf.mp3"
-        -
-          name: "Pacman Die"
-          id: 41
-          file: "D:\\Share\\OBS\\Sounds\\pacman-die.mp3"
-        -
-          name: "Roger That"
-          id: 42
-          file: "D:\\Share\\OBS\\Sounds\\roger.mp3"
-        -
-          name: "Zelda got item"
-          id: 43
-          file: "D:\\Share\\OBS\\Sounds\\139-item-catch.mp3"
-        -
-          name: "Jeopardy Theme"
-          id: 44
-          file: "D:\\Share\\OBS\\Sounds\\jeopardy.mp3"
-        -
-          name: "Stop, Hammer Time."
-          id: 45
-          file: "D:\\Share\\OBS\\Sounds\\stop_1.mp3"
-        -
-          name: "Peon Grunt: Work Complete"
-          id: 46
-          file: "D:\\Share\\OBS\\Sounds\\warcraft-ii-sound-effects-orc-peon-grunt_-_work-complete.mp3"
-        -
-          name: "Europe: Final Countdown"
-          id: 47
-          file: "D:\\Share\\OBS\\Sounds\\europe-the-final-countdownwith-lyrics-mp3cut.mp3"
-        
+      defaultmode: "dual"
+      modes:
+        dual:
+          name: "Scenes, Transitions, and Soundboard"
+          notes:
+            scenes: [8,9,10,11,12,13,14]
+            transitions: [16,17,18,19,20,21,22,23]
+            recording: [15]
+            streaming: [23]
+          soundboard:
+            -
+              name: "Ba Dum Tss"
+              id: 32
+              file: "D:\\Share\\OBS\\Sounds\\ba-dum-tss_2.mp3"
+            -
+              name: "Cheers Love"
+              id: 33
+              file: "D:\\Share\\OBS\\Sounds\\cheerslove_1.mp3"
+            -
+              name: "Dun Dun"
+              id: 34
+              file: "D:\\Share\\OBS\\Sounds\\dun-dun.mp3"
+            -
+              name: "Excellent"
+              id: 35
+              file: "D:\\Share\\OBS\\Sounds\\excellent.mp3"
+            -
+              name: "Homer: Nerd!"
+              id: 36
+              file: "D:\\Share\\OBS\\Sounds\\homer-simpson-nerd.mp3"
+            -
+              name: "Wilhem Scream"
+              id: 37
+              file: "D:\\Share\\OBS\\Sounds\\wilhelmscream.mp3"
+            -
+              name: "I'm Batman!"
+              id: 38
+              file: "D:\\Share\\OBS\\Sounds\\im-batman_1.mp3"
+            -
+              name: "Windows Startup"
+              id: 39
+              file: "D:\\Share\\OBS\\Sounds\\inicio-windows.mp3"
+            -
+              name: "Krik: Khaaan"
+              id: 40
+              file: "D:\\Share\\OBS\\Sounds\\khaaan.swf.mp3"
+            -
+              name: "Pacman Die"
+              id: 41
+              file: "D:\\Share\\OBS\\Sounds\\pacman-die.mp3"
+            -
+              name: "Roger That"
+              id: 42
+              file: "D:\\Share\\OBS\\Sounds\\roger.mp3"
+            -
+              name: "Zelda got item"
+              id: 43
+              file: "D:\\Share\\OBS\\Sounds\\139-item-catch.mp3"
+            -
+              name: "Jeopardy Theme"
+              id: 44
+              file: "D:\\Share\\OBS\\Sounds\\jeopardy.mp3"
+            -
+              name: "Stop, Hammer Time."
+              id: 45
+              file: "D:\\Share\\OBS\\Sounds\\stop_1.mp3"
+            -
+              name: "Peon Grunt: Work Complete"
+              id: 46
+              file: "D:\\Share\\OBS\\Sounds\\warcraft-ii-sound-effects-orc-peon-grunt_-_work-complete.mp3"
+            -
+              name: "Europe: Final Countdown"
+              id: 47
+              file: "D:\\Share\\OBS\\Sounds\\europe-the-final-countdownwith-lyrics-mp3cut.mp3" 
+        scenes:
+          name: "Scene Controls"
+          notes:
+            scenes: [8,9,10,11,12,13,14,16,17,18,19,20,21,22,23]
+        transitions:
+          name: "Transition Controls"
+          notes:
+            transitions: [8,9,10,11,12,13,14,16,17,18,19,20,21,22,23]
+        macros:
+          name: "Macros"
+          macros:
+            -
+              name: "Test"
+              description: "This is a macro to switch a scene with a 5 second delay."
+              id: 8
+              steps:
+                -
+                  command: "switchScene"
+                  name: "Black"
+                -
+                  command: "transitionScene"
+                  name: "Fade"
+                  duration: 3000
+                -
+                  command: "sleep"
+                  num: 5
+                -
+                  command: "switchScene"
+                  name: "CenterMatrixOverlay"
+                -
+                  command: "transitionScene"
+                  name: "Fade"
+                  duration: 3000
+                
+  

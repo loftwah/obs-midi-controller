@@ -2,6 +2,8 @@ import os
 import time
 import tkinter
 import tkinter.ttk as ttk
+from PIL import Image, ImageTk
+
 
 import confuse
 import mido
@@ -10,6 +12,8 @@ import obswebsocket.requests
 import yaml
 import pygame.mixer as mixer
 import math
+import importlib
+import obsmidicontroller.macro
 
 class OBSMidi:
     client = None
@@ -20,7 +24,8 @@ class OBSMidi:
     port=None
     outport=None
     page=0
- 
+    mode=None
+
     def __init__(self, config):
         self.config = config
         self.initUI()
@@ -33,7 +38,6 @@ class OBSMidi:
         #Initialize connection to OBS
         self.initOBS(self.hst.get(), self.prt.get(), self.pw.get())
         self.updateObsTree()
-
         self.window.mainloop()
 
     def initController(self):
@@ -43,8 +47,11 @@ class OBSMidi:
             print(c['name'])
             if c['name'].get()==self.activeinputcontroller:
                 self.controller=c
+        if self.controller:
+            self.mode=self.controller['defaultmode'].get()
+            print("mode set to: %s"%self.mode)
         print(self.controller)
-        
+
     def initMidi(self):
         if self.port:
             self.port.close()
@@ -70,7 +77,7 @@ class OBSMidi:
     def initOBS(self, host, port, password):
         if self.client:
             self.client.disconnect()
-        
+
         self.client = obswebsocket.obsws(host, port, password)
         self.client.connect()
         self.client.register(self.obsevent,obswebsocket.events.SwitchScenes)
@@ -80,14 +87,14 @@ class OBSMidi:
         self.client.register(self.newtreeobsevent,obswebsocket.events.ProfileChanged)
         self.client.register(self.newtreeobsevent,obswebsocket.events.ProfileListChanged)
         self.client.register(self.newtreeobsevent,obswebsocket.events.TransitionListChanged)
-        
+
 
         self.initializeAudiosources()
 
     def newtreeobsevent(self,event):
         print("^%$^%$^%$^ tree updating *(*(&^*&^*&^")
         self.window.after(1,self.updateObsTree)
-    
+
     def obsevent(self, event):
         print(event)
         self.audiosources=None
@@ -134,12 +141,19 @@ class OBSMidi:
     def clicked(self):
         self.initOBS(self.hst.get(), self.prt.get(), self.pw.get())
 
+    def modeChanged(self,mode):
+        def modeChangedHandler():
+            print(mode)
+            self.mode=mode
+            self.updateObsTree()
+        return modeChangedHandler
+
     def handleSceneChange(self,message,scenedefs):
         status = self.client.call(
             obswebsocket.requests.GetStudioModeStatus())
         scenes = self.client.call(
             obswebsocket.requests.GetSceneList()).getScenes()
-        
+
         if scenedefs.index(message.note) < len(scenes):
             name = scenes[scenedefs.index(message.note)]['name']
             print(u"Switching to {}".format(name))
@@ -150,7 +164,7 @@ class OBSMidi:
                 self.client.call(
                     obswebsocket.requests.SetCurrentScene(name))
 
-    def handleStreaming(self): 
+    def handleStreaming(self):
         self.client.call(
             obswebsocket.requests.StartStopStreaming())
 
@@ -175,48 +189,64 @@ class OBSMidi:
         mixer.music.load(fle)
         mixer.music.play()
 
+    def doMacro(self,m):
+        macroObj=obsmidicontroller.macro.macro()
+        for s in m['steps']:
+            print("---")
+            print(s)
+            print(s['command'])
+            method = getattr(obsmidicontroller.macro.macro,s['command'])
+            print(method)
+            kwargs=s.copy()
+            del kwargs['command']
+            print(kwargs)
+            method(macroObj,self.client, **kwargs)
+
     def handleMidiMessage(self, message):
         self.outport.send(message)
         if message.type == "note_on":
             print(message)
             if int(message.channel) == self.controller['channel'].get():
-                scenedefs = self.controller['notes']['scenes'].get()
-                if message.note in scenedefs:
-                    self.handleSceneChange(message,scenedefs)
-                reqdefs = self.controller['notes']['recording'].get()
-                if message.note in reqdefs:
-                    self.handleRecording()
-                streamdefs = self.controller['notes']['streaming'].get(
-                )
-                if message.note in streamdefs:
-                    self.handleStreaming()
-                transdefs = self.controller['notes']['transitions'].get(
-                )
-                if message.note in transdefs:
-                    self.handleTransitions(message,transdefs)
-                #mutedefs = self.controller['audio']['mute'].get()
-                #if message.note in mutedefs:
-                #    audiosources=self.getAudioSourcesScene()
-                #    if mutedefs.index(message.note) < len(audiosources):
-                #        name = audiosources[mutedefs.index(message.note)]
-                #        self.client.call(
-                #            obswebsocket.requests.ToggleMute(name))
-                soundboard = self.controller['soundboard'].get()
-                print(soundboard)
-                for i in soundboard:
+                try:
+                    scenedefs = self.controller['modes'][self.mode]['notes']['scenes'].get()
+                    if message.note in scenedefs:
+                        self.handleSceneChange(message,scenedefs)
+                except:
+                    pass
+                try:
+                    reqdefs = self.controller['modes'][self.mode]['notes']['recording'].get()
+                    if message.note in reqdefs:
+                        self.handleRecording()
+                except:
+                    pass
+                try:
+                    streamdefs = self.controller['modes'][self.mode]['notes']['streaming'].get(
+                    )
+                    if message.note in streamdefs:
+                        self.handleStreaming()
+                except:
+                    pass
+                try:
+                    transdefs = self.controller['modes'][self.mode]['notes']['transitions'].get(
+                    )
+                    if message.note in transdefs:
+                        self.handleTransitions(message,transdefs)
+                except:
+                    pass
+                try:
+                    soundboard = self.controller['modes'][self.mode]['soundboard'].get()
+                    print(soundboard)
+                    for i in soundboard:
+                        if message.note==i['id']:
+                            print(i['file'])
+                            self.playSoundboard(i['file'])
+                except:
+                    pass
+                macro = self.controller['modes'][self.mode]['macros'].get()
+                print(macro)
+                for i in macro:
                     if message.note==i['id']:
-                        print(i['file'])
-                        self.playSoundboard(i['file'])
-        #elif message.type == "control_change":
-        #    if int(message.channel) == self.controller['channel']['id'].get():
-        #        voldefs = self.controller['audio']['vol'].get()
-        #        if message.control in voldefs:
-        #            audiosources=self.getAudioSourcesScene()
-        #            if voldefs.index(message.control) < len(audiosources):
-        #                name = audiosources[voldefs.index(
-        #                    message.control)]
-        #                self.client.call(obswebsocket.requests.SetVolume(
-        #                    name, (float(message.value)/127.0)))
+                        self.doMacro(i)
         else:
             print(message)
 
@@ -224,63 +254,114 @@ class OBSMidi:
         pass
 
     def updateObsTree(self):
-        self.obstree.delete('scenes')
-        self.obstree.delete('transitions')
-        self.obstree.delete('recording')
-        self.obstree.delete('streaming')
-
-        self.obstree.insert('', 'end', 'scenes', text='Scenes',open=True)
-        self.obstree.insert('', 'end', 'transitions', text='Transitions',open=True)
-        self.obstree.insert('', 'end', 'recording', text='Recording',open=True)
-        self.obstree.insert('', 'end', 'streaming', text='Streaming',open=True)
+        try:
+            self.obstree.delete('scenes')
+        except:
+            pass
+        try:
+            self.obstree.delete('transitions')
+        except:
+            pass
+        try:
+            self.obstree.delete('recording')
+        except:
+            pass
+        try:
+            self.obstree.delete('streaming')
+        except:
+            pass
 
         self.sbtree.delete(*self.sbtree.get_children())
-        
-        scenes = self.client.call( obswebsocket.requests.GetSceneList()).getScenes()
-        scenedefs=self.controller['notes']['scenes'].get()
-        for i in scenedefs:
-            index=scenedefs.index(i)
-            if index<len(scenes):
-                name = scenes[index]['name']
-                self.obstree.insert('scenes', 'end', name, text=name,
-                            values=(self.midiin.get(),self.chnl.get(),i))
+        self.macrotree.delete(*self.macrotree.get_children())
 
-        trans = self.client.call(
-            obswebsocket.requests.GetTransitionList()).getTransitions()
-        print(trans)
-        transdefs = self.controller['notes']['transitions'].get(
-                )
-        print(transdefs)
-        for i in transdefs:
-            print(i)
-            index=transdefs.index(i)
-            print(index)
-            if index<len(trans):
-                name = trans[index]['name']
-                print("inserting: %s"%name)
-                self.obstree.insert('transitions', 'end', name, text=name,
+        try:
+            scenes = self.client.call( obswebsocket.requests.GetSceneList()).getScenes()
+            scenedefs=self.controller['modes'][self.mode]['notes']['scenes'].get()
+            self.obstree.insert('', 'end', 'scenes', text='Scenes',open=True)
+            for i in scenedefs:
+                index=scenedefs.index(i)
+                if index<len(scenes):
+                    name = scenes[index]['name']
+                    self.obstree.insert('scenes', 'end', name, text=name,
+                                values=(self.midiin.get(),self.chnl.get(),i))
+        except Exception as e:
+            print(e)
+            pass
+
+        try:
+            trans = self.client.call(
+                obswebsocket.requests.GetTransitionList()).getTransitions()
+            transdefs = self.controller['modes'][self.mode]['notes']['transitions'].get(
+                    )
+            self.obstree.insert('', 'end', 'transitions', text='Transitions',open=True)
+            for i in transdefs:
+                print(i)
+                index=transdefs.index(i)
+                print(index)
+                if index<len(trans):
+                    name = trans[index]['name']
+                    print("inserting: %s"%name)
+                    self.obstree.insert('transitions', 'end', name, text=name,
+                                values=(self.midiin.get(),self.chnl.get(),i))
+        except Exception as e:
+            print(e)
+            pass
+
+        try:
+            reqdefs = self.controller['modes'][self.mode]['notes']['recording'].get()
+            self.obstree.insert('', 'end', 'recording', text='Recording',open=True)
+            for i in reqdefs:
+                name="req-%s"%i
+                self.obstree.insert('recording', 'end', name, text=name,
                             values=(self.midiin.get(),self.chnl.get(),i))
-        reqdefs = self.controller['notes']['recording'].get()
-        for i in reqdefs:
-            name="req-%s"%i
-            self.obstree.insert('recording', 'end', name, text=name,
-                        values=(self.midiin.get(),self.chnl.get(),i))
-        strmdefs = self.controller['notes']['streaming'].get()
-        for i in strmdefs:
-            name="strm-%s"%i
-            self.obstree.insert('streaming', 'end', name, text=name,
-                        values=(self.midiin.get(),self.chnl.get(),i))
-        sounddefs=self.controller['soundboard'].get()
-        for i in sounddefs:
-            name=i['name']
-            self.sbtree.insert('', 'end', name, text=name,
-                        values=(self.midiin.get(),self.chnl.get(),i['id'],i['file']))
-        
+        except Exception as e:
+            print(e)
+            pass
+
+        try:
+            strmdefs = self.controller['modes'][self.mode]['notes']['streaming'].get()
+            self.obstree.insert('', 'end', 'streaming', text='Streaming',open=True)
+            for i in strmdefs:
+                name="strm-%s"%i
+                self.obstree.insert('streaming', 'end', name, text=name,
+                            values=(self.midiin.get(),self.chnl.get(),i))
+        except Exception as e:
+            print(e)
+            pass
+
+        try:
+            sounddefs=self.controller['modes'][self.mode]['soundboard'].get()
+            for i in sounddefs:
+                name=i['name']
+                self.sbtree.insert('', 'end', name, text=name,
+                            values=(self.midiin.get(),self.chnl.get(),i['id'],i['file']))
+        except Exception as e:
+            print(e)
+            pass
+        try:
+            macdefs=self.controller['modes'][self.mode]['macros'].get()
+            for i in macdefs:
+                name=i['name']
+                self.macrotree.insert('', 'end', name, text=name,
+                            values=(self.midiin.get(),self.chnl.get(),i['id'],i['description']))
+        except Exception as e:
+            print(e)
+            pass
+
+    def mouseClick(self,event):
+        print(event)
 
     def initUI(self):
         self.window = tkinter.Tk()
         self.window.title("OBS Midi Controller")
         self.initController()
+
+        self.mainui = ttk.Notebook(self.window)
+        self.obsconf = ttk.Frame(self.mainui)   # first page, which would get widgets gridded into it
+        self.midiconf = ttk.Frame(self.mainui)   # second page
+        self.mainui.add(self.midiconf, text='MIDI Interface')
+        self.mainui.add(self.obsconf, text='OBS Configuration')
+        self.mainui.pack()
 
         self.hst = tkinter.StringVar()
         self.hst.set(self.config['obsserver']['host'])
@@ -296,46 +377,69 @@ class OBSMidi:
         self.midiout = tkinter.StringVar()
         self.midiout.set(self.activeoutputcontroller)
 
+        tkinter.Label(self.obsconf, text="Host").grid(column=0, row=1, sticky='w', padx=5, pady=5)
+        self.hstW = tkinter.Entry(self.obsconf, width=10, textvariable=self.hst)
+        self.hstW.grid(column=1, row=1,sticky="we", padx=5, pady=5)
 
-        tkinter.Label(self.window, text="OBS Server").grid(column=0, row=0)
+        tkinter.Label(self.obsconf, text="Port").grid(column=2, row=1, sticky='w', padx=5, pady=5)
+        self.prtW = tkinter.Entry(self.obsconf, width=10, textvariable=self.prt)
+        self.prtW.grid(column=3, row=1,sticky="we", padx=5, pady=5)
 
-        tkinter.Label(self.window, text="Host").grid(column=0, row=1)
-        self.hstW = tkinter.Entry(self.window, width=10, textvariable=self.hst)
-        self.hstW.grid(column=1, row=1)
+        tkinter.Label(self.obsconf, text="Password").grid(column=0, row=2, sticky='w', padx=5, pady=5)
+        self.pwW = tkinter.Entry(self.obsconf, width=10, textvariable=self.pw)
+        self.pwW.grid(column=1, row=2,sticky="we", padx=5, pady=5)
 
-        tkinter.Label(self.window, text="Port").grid(column=2, row=1)
-        self.prtW = tkinter.Entry(self.window, width=10, textvariable=self.prt)
-        self.prtW.grid(column=3, row=1)
 
-        tkinter.Label(self.window, text="Password").grid(column=0, row=2)
-        self.pwW = tkinter.Entry(self.window, width=10, textvariable=self.pw)
-        self.pwW.grid(column=1, row=2)
+        tkinter.Label(self.midiconf, text="Midi Output").grid(column=0, row=1, sticky='w', padx=5, pady=5)
+        self.midioutCombo=tkinter.ttk.Combobox(self.midiconf,textvariable=self.midiout)
 
-        
-        tkinter.Label(self.window, text="Midi Output").grid(column=0, row=3)
-        self.midioutCombo=tkinter.ttk.Combobox(self.window,textvariable=self.midiout)
-
-        self.midioutCombo.grid(column=1,row=3)
+        self.midioutCombo.grid(column=1,row=1,sticky="we", padx=5, pady=5)
         self.midioutCombo['values'] = mido.get_output_names()
 
-        tkinter.Label(self.window, text="Midi Input").grid(column=2, row=3)
-        self.midiinCombo=tkinter.ttk.Combobox(self.window,textvariable=self.midiin)
+        tkinter.Label(self.midiconf, text="Midi Input").grid(column=2, row=1, sticky='w', padx=5, pady=5)
+        self.midiinCombo=tkinter.ttk.Combobox(self.midiconf,textvariable=self.midiin)
 
-        self.midiinCombo.grid(column=3,row=3)
+        self.midiinCombo.grid(column=3,row=1,sticky="we", padx=5, pady=5)
         self.midiinCombo['values'] = mido.get_input_names()
 
-        tkinter.Label(self.window, text="Input Channel").grid(column=2, row=4)
+        tkinter.Label(self.midiconf, text="Input Channel").grid(column=2, row=2, sticky='w', padx=5, pady=5)
         self.chnlW = tkinter.Entry(
-            self.window, width=10, textvariable=self.chnl)
-        self.chnlW.grid(column=3, row=4)
+            self.midiconf, width=10, textvariable=self.chnl)
+        self.chnlW.grid(column=3, row=2,sticky="we", padx=5, pady=5)
 
 
-        self.n = ttk.Notebook(self.window)
+        load = Image.open(".\obsmidicontroller\X-TOUCH-MINI.png")
+        render = ImageTk.PhotoImage(load)
+
+        self.img = tkinter.Label(self.midiconf, image=render)
+        self.img.image=render
+        self.img.grid(column=0, columnspan=5, row=3, padx=5, pady=5)
+        self.img.bind( "<Button>", self.mouseClick )
+
+
+        print("Working on Control buttons")
+        lf = ttk.Labelframe(self.midiconf, text='Control Modes')
+        print("modes ----")
+        print(self.controller['modes'])
+        for m in self.controller['modes']:
+            print("----")
+            print(m)
+            print(self.controller['modes'][m])
+            print(self.controller['modes'][m]['name'])
+            btn=tkinter.Button(lf, text=self.controller['modes'][m]['name'], command=self.modeChanged(m))
+            btn.pack(side=tkinter.LEFT, padx=5, pady=5)
+        lf.grid(column=0, columnspan=5,row=4,sticky='we')
+        print("----modes")
+
+
+        self.n = ttk.Notebook(self.midiconf)
         self.obs = ttk.Frame(self.n)   # first page, which would get widgets gridded into it
         self.soundboard = ttk.Frame(self.n)   # second page
+        self.macro = ttk.Frame(self.n)   # second page
         self.n.add(self.obs, text='OBS Controls')
         self.n.add(self.soundboard, text='Soundboard')
-        self.n.grid(column=0, row=5, columnspan=6)
+        self.n.add(self.macro, text='Macros')
+        self.n.grid(column=0, row=5, columnspan=6,sticky="we", padx=5, pady=5)
 
         self.obstree = ttk.Treeview(
             self.obs, columns=('midi', 'channel', 'code'))
@@ -343,7 +447,7 @@ class OBSMidi:
         self.obstree.heading("midi", text="Midi Device", anchor=tkinter.W)
         self.obstree.heading("channel", text="Channel", anchor=tkinter.W)
         self.obstree.heading("code", text="Code", anchor=tkinter.W)
-        
+
         self.obstree.insert('', 'end', 'scenes', text='Scenes',
                          values=('15KB Yesterday mark'))
         self.obstree.insert('', 'end', 'transitions', text='Transitions',
@@ -353,7 +457,7 @@ class OBSMidi:
         self.obstree.insert('', 'end', 'streaming', text='Streaming',
                          values=('15KB Yesterday mark'))
 
-        self.obstree.grid(column=0,row=0)
+        self.obstree.grid(column=0,row=0,sticky='nsew')
 
         self.sbtree = ttk.Treeview(
             self.soundboard, columns=('midi', 'channel', 'code','path'))
@@ -363,17 +467,17 @@ class OBSMidi:
         self.sbtree.heading("code", text="Code", anchor=tkinter.W)
         self.sbtree.heading("path", text="Path", anchor=tkinter.W)
 
-        self.sbtree.grid(column=0,row=0)
+        self.sbtree.grid(column=0,row=0,sticky='nsew')
 
-        self.btn = tkinter.Button(
-            self.window, text="Connect", command=self.clicked)
-        self.btn.grid(column=1, row=6)
-        
-        self.btn = tkinter.Button(
-            self.window, text="Save Config", command=self.saveConfig)
-        self.btn.grid(column=3, row=6)
+        self.macrotree = ttk.Treeview(
+            self.macro, columns=('midi', 'channel', 'code','description'))
+        self.macrotree.heading("#0", text="Name", anchor=tkinter.W)
+        self.macrotree.heading("midi", text="Midi Device", anchor=tkinter.W)
+        self.macrotree.heading("channel", text="Channel", anchor=tkinter.W)
+        self.macrotree.heading("code", text="Code", anchor=tkinter.W)
+        self.macrotree.heading("description", text="Description", anchor=tkinter.W)
 
-        
+        self.macrotree.grid(column=0,row=0,sticky='nsew')
 
 
 def main():
