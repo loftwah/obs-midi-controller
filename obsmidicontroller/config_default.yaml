@@ -98,7 +98,7 @@ controllers:
             -
               name: "Test"
               description: "This is a macro to switch a scene with a 5 second delay."
-              id: 8
+              id: 9
               steps:
                 -
                   command: "switchScene"
@@ -117,5 +117,50 @@ controllers:
                   command: "transitionScene"
                   name: "Fade"
                   duration: 3000
-                
+            -
+              name: "BrowserTest"
+              description: "This is a macro to switch a scene with a 5 second delay."
+              id: 8
+              steps:
+                -
+                  command: "switchScene"
+                  name: "BrowserScene"
+                -
+                  command: "transitionScene"
+                  name: "Fade"
+                  duration: 3000
+                -
+                  command: "setBrowserSource"
+                  source: "Browser"
+                  url: "http://www.slashdot.org"
+            -
+              name: "MediaTest"
+              description: "This is a macro to switch a scene with a 5 second delay."
+              id: 10
+              steps:
+                -
+                  command: "switchScene"
+                  name: "Black"
+                -
+                  command: "transitionScene"
+                  name: "Cut"
+                -
+                  command: "sleep"
+                  num: 1
+                -
+                  command: "switchScene"
+                  name: "TitleScene"
+                -
+                  command: "transitionScene"
+                  name: "Cut"
+                -
+                  command: "sleep"
+                  num: 5
+                -
+                  command: "switchScene"
+                  name: "CenterMatrixOverlay"
+                -
+                  command: "transitionScene"
+                  name: "Fire"
+                              
   
