@@ -25,6 +25,7 @@ class OBSMidi:
     outport=None
     page=0
     mode=None
+    transdefs=None
 
     def __init__(self, config):
         self.config = config
@@ -172,13 +173,15 @@ class OBSMidi:
         self.client.call(
                         obswebsocket.requests.StartStopRecording())
 
-    def handleTransitions(self,message,transdefs):
+    def handleTransitions(self,i):
         status = self.client.call(
             obswebsocket.requests.GetStudioModeStatus())
-        trans = self.client.call(
-            obswebsocket.requests.GetTransitionList()).getTransitions()
-        if transdefs.index(message.note) < len(trans):
-            name = trans[transdefs.index(message.note)]['name']
+        print(i)
+        print(self.transdefs)
+        print(i in self.transdefs)
+        if i in self.transdefs:
+            name = self.transdefs[i]
+            print(name)
             self.client.call(
                 obswebsocket.requests.SetCurrentTransition(name))
             if status.getStudioMode():
@@ -227,10 +230,7 @@ class OBSMidi:
                 except:
                     pass
                 try:
-                    transdefs = self.controller['modes'][self.mode]['notes']['transitions'].get(
-                    )
-                    if message.note in transdefs:
-                        self.handleTransitions(message,transdefs)
+                        self.handleTransitions(message.note)
                 except:
                     pass
                 try:
@@ -242,11 +242,14 @@ class OBSMidi:
                             self.playSoundboard(i['file'])
                 except:
                     pass
-                macro = self.controller['modes'][self.mode]['macros'].get()
-                print(macro)
-                for i in macro:
-                    if message.note==i['id']:
-                        self.doMacro(i)
+                try:
+                    macro = self.controller['modes'][self.mode]['macros'].get()
+                    print(macro)
+                    for i in macro:
+                        if message.note==i['id']:
+                            self.doMacro(i)
+                except:
+                    pass
         else:
             print(message)
 
@@ -291,18 +294,39 @@ class OBSMidi:
         try:
             trans = self.client.call(
                 obswebsocket.requests.GetTransitionList()).getTransitions()
-            transdefs = self.controller['modes'][self.mode]['notes']['transitions'].get(
+            transconfig = self.controller['modes'][self.mode]['notes']['transitions'].get(
                     )
             self.obstree.insert('', 'end', 'transitions', text='Transitions',open=True)
-            for i in transdefs:
+            
+            ind=0
+            self.transdefs={}
+            inserted=[]
+            for i in transconfig:
                 print(i)
-                index=transdefs.index(i)
-                print(index)
-                if index<len(trans):
-                    name = trans[index]['name']
-                    print("inserting: %s"%name)
+                print(i['id'])
+
+                if 'name' in i:
+                    name=i['name']
+                    inserted.append(name)
+                    self.transdefs[i['id']]=name
                     self.obstree.insert('transitions', 'end', name, text=name,
-                                values=(self.midiin.get(),self.chnl.get(),i))
+                                    values=(self.midiin.get(),self.chnl.get(),i['id']))                    
+                else:
+                    if ind<len(trans):
+                        while True:
+                            name=trans[ind]['name']
+                            print(name)
+                            print(inserted)
+                            print(ind)
+                            ind+=1
+                            if not name in inserted:
+                                break
+                        inserted.append(name)
+                        self.transdefs[i['id']]=name
+
+                        print("inserting: %s"%name)
+                        self.obstree.insert('transitions', 'end', name, text=name,
+                                    values=(self.midiin.get(),self.chnl.get(),i['id']))                    
         except Exception as e:
             print(e)
             pass
@@ -342,6 +366,7 @@ class OBSMidi:
             macdefs=self.controller['modes'][self.mode]['macros'].get()
             for i in macdefs:
                 name=i['name']
+
                 self.macrotree.insert('', 'end', name, text=name,
                             values=(self.midiin.get(),self.chnl.get(),i['id'],i['description']))
         except Exception as e:
@@ -408,7 +433,7 @@ class OBSMidi:
         self.chnlW.grid(column=3, row=2,sticky="we", padx=5, pady=5)
 
 
-        load = Image.open(".\obsmidicontroller\X-TOUCH-MINI.png")
+        load = Image.open(".\X-TOUCH-MINI.png")
         render = ImageTk.PhotoImage(load)
 
         self.img = tkinter.Label(self.midiconf, image=render)
